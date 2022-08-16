@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@octokit/core": "^1.0.0",
-    "@octokit/plugin-paginate-rest": "^1.0.0",
+    "@octokit/plugin-paginate-rest": "^2.3.0",
     "@octokit/plugin-throttling": "^1.0.0",
     "@octokit/request-error": "^1.0.0",
     "@vercel/ncc": "^0.33.0",
