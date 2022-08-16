@@ -2098,7 +2098,7 @@ const process = __nccwpck_require__(282);
 const { Argument, humanReadableArgName } = __nccwpck_require__(414);
 const { CommanderError } = __nccwpck_require__(625);
 const { Help } = __nccwpck_require__(153);
-const { Option, splitOptionFlags } = __nccwpck_require__(558);
+const { Option, splitOptionFlags, DualOptions } = __nccwpck_require__(558);
 const { suggestSimilar } = __nccwpck_require__(592);
 
 // @ts-check
@@ -2139,6 +2139,7 @@ class Command extends EventEmitter {
     this._aliases = [];
     this._combineFlagAndOptionalValue = true;
     this._description = '';
+    this._summary = '';
     this._argsDescription = undefined; // legacy
     this._enablePositionalOptions = false;
     this._passThroughOptions = false;
@@ -2489,7 +2490,7 @@ class Command extends EventEmitter {
    */
 
   hook(event, listener) {
-    const allowedValues = ['preAction', 'postAction'];
+    const allowedValues = ['preSubcommand', 'preAction', 'postAction'];
     if (!allowedValues.includes(event)) {
       throw new Error(`Unexpected value for event passed to hook : '${event}'.
 Expecting one of '${allowedValues.join("', '")}'`);
@@ -3037,6 +3038,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 
     // Not checking for help first. Unlikely to have mandatory and executable, and can't robustly test for help flags in external command.
     this._checkForMissingMandatoryOptions();
+    this._checkForConflictingOptions();
 
     // executableFile and executableDir might be full path, or just a name
     let executableFile = subcommand._executableFile || `${this._name}-${subcommand._name}`;
@@ -3143,11 +3145,16 @@ Expecting one of '${allowedValues.join("', '")}'`);
     const subCommand = this._findCommand(commandName);
     if (!subCommand) this.help({ error: true });
 
-    if (subCommand._executableHandler) {
-      this._executeSubCommand(subCommand, operands.concat(unknown));
-    } else {
-      return subCommand._parseCommand(operands, unknown);
-    }
+    let hookResult;
+    hookResult = this._chainOrCallSubCommandHook(hookResult, subCommand, 'preSubcommand');
+    hookResult = this._chainOrCall(hookResult, () => {
+      if (subCommand._executableHandler) {
+        this._executeSubCommand(subCommand, operands.concat(unknown));
+      } else {
+        return subCommand._parseCommand(operands, unknown);
+      }
+    });
+    return hookResult;
   }
 
   /**
@@ -3275,6 +3282,27 @@ Expecting one of '${allowedValues.join("', '")}'`);
   }
 
   /**
+   *
+   * @param {Promise|undefined} promise
+   * @param {Command} subCommand
+   * @param {string} event
+   * @return {Promise|undefined}
+   * @api private
+   */
+
+  _chainOrCallSubCommandHook(promise, subCommand, event) {
+    let result = promise;
+    if (this._lifeCycleHooks[event] !== undefined) {
+      this._lifeCycleHooks[event].forEach((hook) => {
+        result = this._chainOrCall(result, () => {
+          return hook(this, subCommand);
+        });
+      });
+    }
+    return result;
+  }
+
+  /**
    * Process arguments in context of this command.
    * Returns action result, in case it is a promise.
    *
@@ -3284,6 +3312,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
   _parseCommand(operands, unknown) {
     const parsed = this.parseOptions(unknown);
     this._parseOptionsEnv(); // after cli, so parseArg not called on both cli and env
+    this._parseOptionsImplied();
     operands = operands.concat(parsed.operands);
     unknown = parsed.unknown;
     this.args = operands.concat(unknown);
@@ -3385,7 +3414,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
 
   /**
    * Display an error message if a mandatory option does not have a value.
-   * Lazy calling after checking for help flags from leaf subcommand.
+   * Called after checking for help flags in leaf subcommand.
    *
    * @api private
    */
@@ -3402,11 +3431,11 @@ Expecting one of '${allowedValues.join("', '")}'`);
   }
 
   /**
-   * Display an error message if conflicting options are used together.
+   * Display an error message if conflicting options are used together in this.
    *
    * @api private
    */
-  _checkForConflictingOptions() {
+  _checkForConflictingLocalOptions() {
     const definedNonDefaultOptions = this.options.filter(
       (option) => {
         const optionKey = option.attributeName();
@@ -3429,6 +3458,19 @@ Expecting one of '${allowedValues.join("', '")}'`);
         this._conflictingOption(option, conflictingAndDefined);
       }
     });
+  }
+
+  /**
+   * Display an error message if conflicting options are used together.
+   * Called after checking for help flags in leaf subcommand.
+   *
+   * @api private
+   */
+  _checkForConflictingOptions() {
+    // Walk up hierarchy so can call in subcommand after checking for displaying help.
+    for (let cmd = this; cmd; cmd = cmd.parent) {
+      cmd._checkForConflictingLocalOptions();
+    }
   }
 
   /**
@@ -3647,6 +3689,29 @@ Expecting one of '${allowedValues.join("', '")}'`);
   }
 
   /**
+   * Apply any implied option values, if option is undefined or default value.
+   *
+   * @api private
+   */
+  _parseOptionsImplied() {
+    const dualHelper = new DualOptions(this.options);
+    const hasCustomOptionValue = (optionKey) => {
+      return this.getOptionValue(optionKey) !== undefined && !['default', 'implied'].includes(this.getOptionValueSource(optionKey));
+    };
+    this.options
+      .filter(option => (option.implied !== undefined) &&
+        hasCustomOptionValue(option.attributeName()) &&
+        dualHelper.valueFromOption(this.getOptionValue(option.attributeName()), option))
+      .forEach((option) => {
+        Object.keys(option.implied)
+          .filter(impliedKey => !hasCustomOptionValue(impliedKey))
+          .forEach(impliedKey => {
+            this.setOptionValueWithSource(impliedKey, option.implied[impliedKey], 'implied');
+          });
+      });
+  }
+
+  /**
    * Argument `name` is missing.
    *
    * @param {string} name
@@ -3820,7 +3885,7 @@ Expecting one of '${allowedValues.join("', '")}'`);
   }
 
   /**
-   * Set the description to `str`.
+   * Set the description.
    *
    * @param {string} [str]
    * @param {Object} [argsDescription]
@@ -3832,6 +3897,18 @@ Expecting one of '${allowedValues.join("', '")}'`);
     if (argsDescription) {
       this._argsDescription = argsDescription;
     }
+    return this;
+  }
+
+  /**
+   * Set the summary. Used when listed as subcommand of parent.
+   *
+   * @param {string} [str]
+   * @return {string|Command}
+   */
+  summary(str) {
+    if (str === undefined) return this._summary;
+    this._summary = str;
     return this;
   }
 
@@ -4449,7 +4526,8 @@ class Help {
   }
 
   /**
-   * Get the command description to show in the list of subcommands.
+   * Get the subcommand summary to show in the list of subcommands.
+   * (Fallback to description for backwards compatiblity.)
    *
    * @param {Command} cmd
    * @returns {string}
@@ -4457,7 +4535,7 @@ class Help {
 
   subcommandDescription(cmd) {
     // @ts-ignore: overloaded return type
-    return cmd.description();
+    return cmd.summary() || cmd.description();
   }
 
   /**
@@ -4621,8 +4699,8 @@ class Help {
     const columnWidth = width - indent;
     if (columnWidth < minColumnWidth) return str;
 
-    const leadingStr = str.substr(0, indent);
-    const columnText = str.substr(indent);
+    const leadingStr = str.slice(0, indent);
+    const columnText = str.slice(indent);
 
     const indentString = ' '.repeat(indent);
     const regex = new RegExp('.{1,' + (columnWidth - 1) + '}([\\s\u200B]|$)|[^\\s\u200B]+?([\\s\u200B]|$)', 'g');
@@ -4680,6 +4758,7 @@ class Option {
     this.hidden = false;
     this.argChoices = undefined;
     this.conflictsWith = [];
+    this.implied = undefined;
   }
 
   /**
@@ -4727,6 +4806,24 @@ class Option {
 
   conflicts(names) {
     this.conflictsWith = this.conflictsWith.concat(names);
+    return this;
+  }
+
+  /**
+   * Specify implied option values for when this option is set and the implied options are not.
+   *
+   * The custom processing (parseArg) is not called on the implied values.
+   *
+   * @example
+   * program
+   *   .addOption(new Option('--log', 'write logging information to file'))
+   *   .addOption(new Option('--trace', 'log extra details').implies({ log: 'trace.txt' }));
+   *
+   * @param {Object} impliedOptionValues
+   * @return {Option}
+   */
+  implies(impliedOptionValues) {
+    this.implied = Object.assign(this.implied || {}, impliedOptionValues);
     return this;
   }
 
@@ -4864,6 +4961,53 @@ class Option {
 }
 
 /**
+ * This class is to make it easier to work with dual options, without changing the existing
+ * implementation. We support separate dual options for separate positive and negative options,
+ * like `--build` and `--no-build`, which share a single option value. This works nicely for some
+ * use cases, but is tricky for others where we want separate behaviours despite
+ * the single shared option value.
+ */
+class DualOptions {
+  /**
+   * @param {Option[]} options
+   */
+  constructor(options) {
+    this.positiveOptions = new Map();
+    this.negativeOptions = new Map();
+    this.dualOptions = new Set();
+    options.forEach(option => {
+      if (option.negate) {
+        this.negativeOptions.set(option.attributeName(), option);
+      } else {
+        this.positiveOptions.set(option.attributeName(), option);
+      }
+    });
+    this.negativeOptions.forEach((value, key) => {
+      if (this.positiveOptions.has(key)) {
+        this.dualOptions.add(key);
+      }
+    });
+  }
+
+  /**
+   * Did the value come from the option, and not from possible matching dual option?
+   *
+   * @param {any} value
+   * @param {Option} option
+   * @returns {boolean}
+   */
+  valueFromOption(value, option) {
+    const optionKey = option.attributeName();
+    if (!this.dualOptions.has(optionKey)) return true;
+
+    // Use the value to deduce if (probably) came from the option.
+    const preset = this.negativeOptions.get(optionKey).presetArg;
+    const negativeValue = (preset !== undefined) ? preset : false;
+    return option.negate === (negativeValue === value);
+  }
+}
+
+/**
  * Convert string from kebab-case to camelCase.
  *
  * @param {string} str
@@ -4901,6 +5045,7 @@ function splitOptionFlags(flags) {
 
 exports.Option = Option;
 exports.splitOptionFlags = splitOptionFlags;
+exports.DualOptions = DualOptions;
 
 
 /***/ }),
@@ -5016,7 +5161,7 @@ exports.suggestSimilar = suggestSimilar;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"compliance-reporting","version":"0.1.0","private":true,"description":"Action for generating compliance reports","main":"lib/cli.js","scripts":{"build":"tsc && ncc build --source-map --license licenses.txt","format":"prettier --write \'**/*.ts\'","format-check":"prettier --check \'**/*.ts\'","lint":"eslint src/**/*.ts","lintfix":"eslint src/**/*.ts --fix","package":"ncc build --source-map --license licenses.txt","test":"jest","all":"npm run build && npm run format && npm run lint && npm run package && npm test"},"repository":{"type":"git","url":"git+https://github.com/actions/typescript-action.git"},"keywords":["actions","node","setup"],"author":"","license":"MIT","dependencies":{"@actions/core":"^1.6.0","@actions/github":"^5.0.0","@actions/artifact":"^1.0.0"},"devDependencies":{"@octokit/core":"^3.6.0","@octokit/plugin-paginate-rest":"^2.17.0","@octokit/plugin-throttling":"^3.6.2","@octokit/request-error":"^2.1.0","@types/jest":"^27.4.1","@types/js-yaml":"^4.0.5","@types/node":"^17.0.23","@typescript-eslint/parser":"^5.16.0","@vercel/ncc":"^0.33.3","commander":"^9.1.0","dayjs":"^1.11.0","eslint":"^8.11.0","eslint-plugin-github":"^4.3.6","eslint-plugin-jest":"^26.1.3","jest":"^27.5.1","js-yaml":"^4.1.0","prettier":"2.6.1","ts-jest":"^27.1.4","typescript":"^4.6.3"}}');
+module.exports = JSON.parse('{"name":"compliance-reporting","version":"0.1.0","private":true,"description":"Action for generating compliance reports","main":"lib/cli.js","scripts":{"build":"tsc && ncc build --source-map --license licenses.txt","package":"ncc build --source-map --license licenses.txt","all":"npm run build && npm run package"},"repository":{"type":"git","url":"git+https://github.com/actions/typescript-action.git"},"keywords":["actions","node","setup"],"author":"","license":"MIT","dependencies":{"@actions/core":"^1.0.0","@actions/github":"^1.0.0","@actions/artifact":"^1.0.0"},"devDependencies":{"@octokit/core":"^1.0.0","@octokit/plugin-paginate-rest":"^1.0.0","@octokit/plugin-throttling":"^1.0.0","@octokit/request-error":"^1.0.0","@vercel/ncc":"^0.33.0","commander":"^9.1.0","typescript":"^4.0.2"}}');
 
 /***/ })
 
