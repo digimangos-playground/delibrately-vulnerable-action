@@ -1,0 +1,14 @@
+{
+    "rules": [
+        {
+            "name": "MyTypeScriptRule",
+            "language": "TypeScript",
+            "description": "Checks if the TypeScript workflow is valid",
+            "failureMessage": "Expected typescript project to have a step named 'Checkout' and use actions/checkout@v2.4.0",
+            "step": {
+                "name": "Checkout",
+                "uses": "actions/checkout@v2.4.0"
+            }
+        }
+    ]
+}

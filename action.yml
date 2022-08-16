@@ -1,0 +1,28 @@
+name: 'Compliance Reporting'
+description: 'To report on the compliance of repositories with and without standard settings'
+author: '@digimangos'
+inputs:
+  command: 
+    required: true
+    description: 'Command to execute'
+  token:
+    required: true
+    description: 'Personal Access Token or GITHUB_TOKEN (or comma separated tokens)'
+  enterprise:
+    required: true
+    description: 'Enterprise slug'
+  config_directory:
+    required: true
+    description: 'Path to directory containing configuration files (e.g. rule file)'
+  exceptions_directory:
+    required: true
+    description: 'Path to directory containing rule exceptions'
+  reporting_repository:
+    required: false
+    description: 'Optional - Repository specified as Owner/Repo for final report'
+  organization:
+    required: false
+    description: 'Optional - Limit to specified organization login only'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'

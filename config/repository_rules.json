@@ -1,0 +1,178 @@
+{
+    "organizationRules": [{
+        "name": "Team Discussion Settings",
+        "description": "This rule is to check whether discussions are enabled for an organisation.",
+        "failureMessage": "The setting for team discussions is false but expected true",
+        "ruleDefinition": "teamDiscussionsSetting === true"
+    }],
+    "repositoryRules": [
+        {
+            "name": "Wikis",
+            "description": "This rule is to check that the repository is not configured to use Wikis.",
+            "failureMessage": "The setting for Wikis is true but expected false",
+            "ruleDefinition": "hasWikiEnabled === false"
+        },
+        {
+            "name": "Issues",
+            "description": "This rule is to check that the repository is configured to use Issues.",
+            "failureMessage": "The setting for Issues is false but expected true",
+            "ruleDefinition": "hasIssuesEnabled === true"
+        },
+        {
+            "name": "Allow forking",
+            "description": "This rule is to check that the repository is not configured to use Allow forking.",
+            "failureMessage": "The setting for Allow forking is true but expected false",
+            "ruleDefinition": "forkingAllowed === false"
+        },
+        {
+            "name": "Projects",
+            "description": "This rule is to check that the repository is not configured to use Projects.",
+            "failureMessage": "The setting for Projects is true but expected false",
+            "ruleDefinition": "hasProjectsEnabled === false"
+        },
+        {
+            "name": "Allow merge commits",
+            "description": "This rule is to check that the repository is configured to use Allow merge commits.",
+            "failureMessage": "The setting for Allow merge commits is false but expected true",
+            "ruleDefinition": "mergeCommitAllowed === true"
+        },
+        {
+            "name": "Allow squash merging",
+            "description": "This rule is to check that the repository is configured to use Allow squash merging.",
+            "failureMessage": "The setting for Allow squash merging is false but expected true",
+            "ruleDefinition": "squashMergeAllowed === true"
+        },
+        {
+            "name": "Allow rebase merging",
+            "description": "This rule is to check that the repository is configured to use Allow rebase merging.",
+            "failureMessage": "The setting for Allow rebase merging is false but expected true",
+            "ruleDefinition": "rebaseMergeAllowed === true"
+        },
+        {
+            "name": "Allow auto-merge",
+            "description": "This rule is to check that the repository is not configured to use Allow auto-merge.",
+            "failureMessage": "The setting for Allow auto-merge is true but expected false",
+            "ruleDefinition": "autoMergeAllowed === false"
+        },
+        {
+            "name": "Automatically delete head branches",
+            "description": "This rule is to check that the repository is configured to use Automatically delete head branches.",
+            "failureMessage": "The setting for Automatically delete head branches is false but expected true",
+            "ruleDefinition": "deleteBranchOnMerge === true"
+        },
+        {
+            "name": "Require approvals",
+            "description": "This rule is to check that the repository is configured to use Require approvals.",
+            "failureMessage": "The setting for Require approvals is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiresApprovingReviews === true"
+        },
+        {
+            "name": "Required number of approvals before merging",
+            "description": "This rule is to check that the repository is configured to use Required number of approvals before merging = 2.",
+            "failureMessage": "The setting for Required number of approvals before merging = 2 is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiredApprovingReviewCount >= 2 === true"
+        },
+        {
+            "name": "Dismiss stale pull request approvals when new commits are pushed",
+            "description": "This rule is to check that the repository is configured to use Dismiss stale pull request approvals when new commits are pushed.",
+            "failureMessage": "The setting for Dismiss stale pull request approvals when new commits are pushed is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').dismissesStaleReviews === true"
+        },
+        {
+            "name": "Require review from Code Owners",
+            "description": "This rule is to check that the repository is configured to use Require review from Code Owners.",
+            "failureMessage": "The setting for Require review from Code Owners is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiresCodeOwnerReviews === true"
+        },
+        {
+            "name": "Restrict who can dismiss pull request reviews",
+            "description": "This rule is to check that the repository is configured to use Restrict who can dismiss pull request reviews.",
+            "failureMessage": "The setting for Restrict who can dismiss pull request reviews is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').restrictsReviewDismissals === true"
+        },
+        {
+            "name": "Allow specified actors to bypass pull request requirements",
+            "description": "This rule is to check that the repository is not configured to use Allow specified actors to bypass pull request requirements.",
+            "failureMessage": "The setting for Allow specified actors to bypass pull request requirements is true but expected false or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').bypassPullRequestAllowances.totalCount === 0 === true"
+        },
+        {
+            "name": "Require status checks to pass before merging",
+            "description": "This rule is to check that the repository is configured to use Require status checks to pass before merging.",
+            "failureMessage": "The setting for Require status checks to pass before merging is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiresStrictStatusChecks === true"
+        },
+        {
+            "name": "Require branches to be up to date before merging",
+            "description": "This rule is to check that the repository is configured to use Require branches to be up to date before merging.",
+            "failureMessage": "The setting for Require branches to be up to date before merging is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiresStrictStatusChecks === true"
+        },
+        {
+            "name": "Require conversation resolution before merging",
+            "description": "This rule is to check that the repository is configured to use Require conversation resolution before merging.",
+            "failureMessage": "The setting for Require conversation resolution before merging is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiresConversationResolution === true"
+        },
+        {
+            "name": "Require signed commits",
+            "description": "This rule is to check that the repository is configured to use Require signed commits.",
+            "failureMessage": "The setting for Require signed commits is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiresCommitSignatures === true"
+        },
+        {
+            "name": "Require linear history",
+            "description": "This rule is to check that the repository is configured to use Require linear history.",
+            "failureMessage": "The setting for Require linear history is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').requiresLinearHistory === true"
+        },
+        {
+            "name": "Include administrators",
+            "description": "This rule is to check that the repository is configured to use Include administrators.",
+            "failureMessage": "The setting for Include administrators is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').isAdminEnforced === true"
+        },
+        {
+            "name": "Restrict who can push to matching branches",
+            "description": "This rule is to check that the repository is configured to use Restrict who can push to matching branches.",
+            "failureMessage": "The setting for Restrict who can push to matching branches is false but expected true or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').restrictsPushes === true"
+        },
+        {
+            "name": "Allow force pushes",
+            "description": "This rule is to check that the repository is not configured to use Allow force pushes.",
+            "failureMessage": "The setting for Allow force pushes is true but expected false or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').allowsForcePushes === false"
+        },
+        {
+            "name": "Allow deletions",
+            "description": "This rule is to check that the repository is not configured to use Allow deletions.",
+            "failureMessage": "The setting for Allow deletions is true but expected false or branch protection is not configured for a branch named 'main' or 'master'",
+            "ruleDefinition": "branchProtectionRules.nodes.find(x => x.pattern === 'main' || x.pattern === 'master').allowsDeletions === false"
+        },
+        {
+            "name": "Must be an environment called Preproduction",
+            "description": "This rule is to check that the repository is configured to use Must be an environment called Preproduction.",
+            "failureMessage": "The setting for Must be an environment called Preproduction is false but expected true",
+            "ruleDefinition": "environments.nodes.findIndex(e => e.name === 'Preproduction') >= 0"
+        },
+        {
+            "name": "Must be an environment called Production",
+            "description": "This rule is to check that the repository is configured to use Must be an environment called Production.",
+            "failureMessage": "The setting for Must be an environment called Production is false but expected true",
+            "ruleDefinition": "environments.nodes.findIndex(e => e.name === 'Production') >= 0"
+        },
+        {
+            "name": "GitHub Pages",
+            "description": "This rule is to check that the repository is not configured to use GitHub Pages.",
+            "failureMessage": "The setting for GitHub Pages is true but expected false",
+            "ruleDefinition": "environments.nodes.findIndex(e => e.name === 'github-pages') === -1"
+        },
+        {
+            "name": "Vulnerability alerts",
+            "description": "This rule is to check that the repository is configured to use vulnerability alerts.",
+            "failureMessage": "Dependabot vulnerability alerts are expected to be enabled but are disabled",
+            "ruleDefinition": "vulnerabilityAlertsEnabled === true"
+        }
+    ]
+}

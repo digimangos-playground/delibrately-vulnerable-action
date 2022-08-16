@@ -1,0 +1,4 @@
+{
+    "apiDelayMilliSeconds": 2500,
+    "apiMaxRetries" : 5
+}
