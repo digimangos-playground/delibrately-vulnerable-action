@@ -23,7 +23,7 @@
   "dependencies": {
     "@actions/core": "^1.0.0",
     "@actions/github": "^1.0.0",
-    "@actions/artifact": "^1.0.0",
+    "@actions/artifact": "^1.1.1",
     "loopback-connector-postgresql": "^1.3.0",
     "monorepo-build": "^0.1.8"
   },
